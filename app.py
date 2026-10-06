@@ -239,7 +239,7 @@ def add_customer():
         name = request.form['name'].strip()
         phone = request.form.get('phone', '').strip()
         expire_date = request.form['expire_date']
-total_count = int(request.form.get('total_count', 10))
+        total_count = int(request.form.get('total_count', 10))
         if name and expire_date:
             db = get_db()
             cur = db.cursor()
