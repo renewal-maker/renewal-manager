@@ -10,17 +10,15 @@ from jinja2 import DictLoader
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
-
 DB_URL = "postgresql://postgres.psqvlhyulnhcmlonpnkz:xf48TnqNi4gAWz0i@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
 
-# ---------- 基础模板 ----------
 BASE_TEMPLATE = '''
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ title }} - 续费提醒管家</title>
+<title>{{ title }} - Client Tracker</title>
 <style>
 body { font-family: -apple-system, sans-serif; margin: 0; background: #f5f7fa; color: #333; }
 nav { background: #2c3e50; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -37,23 +35,23 @@ input, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px sol
 label { font-weight: bold; }
 .flashes { list-style: none; padding: 0; }
 .flashes li { background: #f39c12; color: white; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
-.status-已过期 { color: #e74c3c; font-weight: bold; }
-.status-7天内 { color: #e67e22; font-weight: bold; }
-.status-30天内 { color: #3498db; }
-.status-正常 { color: #27ae60; }
-.status-无剩余次数 { color: #e74c3c; font-weight: bold; }
+.status-Expired { color: #e74c3c; font-weight: bold; }
+.status-7days { color: #e67e22; font-weight: bold; }
+.status-30days { color: #3498db; }
+.status-Normal { color: #27ae60; }
+.status-NoSessions { color: #e74c3c; font-weight: bold; }
 </style>
 </head>
 <body>
 <nav>
-  <div><a href="/">续费提醒管家</a></div>
+  <div><a href="/">Client Tracker</a></div>
   <div>
     {% if session.get('user_id') %}
-      <a href="/dashboard">仪表盘</a>
-      <a href="/logout">退出</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/logout">Logout</a>
     {% else %}
-      <a href="/login">登录</a>
-      <a href="/register">注册</a>
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
     {% endif %}
   </div>
 </nav>
@@ -74,7 +72,6 @@ label { font-weight: bold; }
 '''
 app.jinja_loader = DictLoader({'base.html': BASE_TEMPLATE})
 
-# ---------- 数据库连接 ----------
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -88,7 +85,6 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
-# ---------- 辅助函数 ----------
 def login_required(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
@@ -119,11 +115,10 @@ def days_until(expire_date):
 def inject_user():
     return dict(user=get_current_user(), plan_active=plan_active)
 
-# ---------- 路由 ----------
 @app.route('/')
 def index():
     if 'user_id' in session: return redirect(url_for('dashboard'))
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h1>续费提醒管家</h1><p>帮美业、宠物、健身等小店自动追踪会员到期与剩余次数。</p><p><a class="btn" href="/register">免费试用 14 天</a> <a class="btn" href="/login">登录</a></p></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h1>Client Tracker</h1><p>Simple tool to track client renewals and session credits.</p><p><a class="btn" href="/register">Start Free Trial</a> <a class="btn" href="/login">Login</a></p></div>{% endblock %}''')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -137,12 +132,12 @@ def register():
                 trial_end = (datetime.date.today() + datetime.timedelta(days=14)).isoformat()
                 cur.execute('INSERT INTO users (username, password_hash, plan_expires_at) VALUES (%s, %s, %s)', (username, generate_password_hash(password), trial_end))
                 db.commit()
-                flash('注册成功，已赠送 14 天试用')
+                flash('Registered successfully. 14-day trial started.')
                 return redirect(url_for('login'))
             except psycopg2.IntegrityError:
                 db.rollback()
-                flash('用户名已存在')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>注册</h2><form method="post"><label>用户名</label><input name="username" required><label>密码</label><input name="password" type="password" required><button class="btn" type="submit">注册</button></form></div>{% endblock %}''')
+                flash('Username already exists')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Register</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Register</button></form></div>{% endblock %}''')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -156,8 +151,8 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             return redirect(url_for('dashboard'))
-        flash('用户名或密码错误')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>登录</h2><form method="post"><label>用户名</label><input name="username" required><label>密码</label><input name="password" type="password" required><button class="btn" type="submit">登录</button></form></div>{% endblock %}''')
+        flash('Invalid username or password')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Login</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Login</button></form></div>{% endblock %}''')
 
 @app.route('/logout')
 def logout():
@@ -177,20 +172,20 @@ def dashboard():
         days = days_until(c['expire_date'])
         remaining = c['total_count'] - c['used_count']
         if remaining <= 0:
-            color = '无剩余次数'
-            status = '次数已用完'
+            color = 'NoSessions'
+            status = 'No sessions left'
         elif days < 0:
-            color = '已过期'
-            status = '已过期'
+            color = 'Expired'
+            status = 'Expired'
         elif days <= 7:
-            color = '7天内'
-            status = f'{days}天后到期'
+            color = '7days'
+            status = f'{days} days left'
         elif days <= 30:
-            color = '30天内'
-            status = f'{days}天后到期'
+            color = '30days'
+            status = f'{days} days left'
         else:
-            color = '正常'
-            status = f'{days}天后到期'
+            color = 'Normal'
+            status = f'{days} days left'
         items.append({'c': c, 'status': status, 'color': color, 'remaining': remaining})
     return render_template_string('''
     {% extends "base.html" %}
@@ -233,7 +228,7 @@ def dashboard():
 def add_customer():
     user = get_current_user()
     if not plan_active(user):
-        flash('订阅已过期')
+        flash('Subscription expired. Please renew.')
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
         name = request.form['name'].strip()
@@ -245,9 +240,9 @@ def add_customer():
             cur = db.cursor()
             cur.execute('INSERT INTO customers (user_id, name, phone, expire_date, total_count, used_count) VALUES (%s, %s, %s, %s, %s, 0)', (user['id'], name, phone, expire_date, total_count))
             db.commit()
-            flash('客户已添加')
+            flash('Client added')
             return redirect(url_for('dashboard'))
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>添加客户</h2><form method="post"><label>姓名 *</label><input name="name" required><label>电话</label><input name="phone"><label>到期日期 *</label><input name="expire_date" type="date" required><label>购买次数 *</label><input name="total_count" type="number" value="10" required><button class="btn" type="submit">保存</button><a class="btn" href="/dashboard">返回</a></form></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Add Client</h2><form method="post"><label>Name *</label><input name="name" required><label>Phone</label><input name="phone"><label>Expiry Date *</label><input name="expire_date" type="date" required><label>Total Sessions *</label><input name="total_count" type="number" value="10" required><button class="btn" type="submit">Save</button><a class="btn" href="/dashboard">Back</a></form></div>{% endblock %}''')
 
 @app.route('/customer/<int:id>/use', methods=['GET'])
 @login_required
@@ -257,7 +252,7 @@ def use_customer(id):
     cur = db.cursor()
     cur.execute('UPDATE customers SET used_count = used_count + 1 WHERE id = %s AND user_id = %s', (id, user['id']))
     db.commit()
-    flash('已扣次')
+    flash('Session deducted')
     return redirect(url_for('dashboard'))
 
 @app.route('/customer/<int:id>/delete', methods=['POST'])
@@ -268,7 +263,7 @@ def delete_customer(id):
     cur = db.cursor()
     cur.execute('DELETE FROM customers WHERE id = %s AND user_id = %s', (id, user['id']))
     db.commit()
-    flash('客户已删除')
+    flash('Client deleted')
     return redirect(url_for('dashboard'))
 
 @app.route('/customer/<int:id>/remind')
@@ -281,8 +276,8 @@ def remind(id):
     c = cur.fetchone()
     if not c: return redirect(url_for('dashboard'))
     remaining = c['total_count'] - c['used_count']
-    text = f"您好 {c['name']}，您的会员/服务将于 {c['expire_date']} 到期，当前剩余 {remaining} 次。为避免影响使用，请及时续费。如有疑问请回复。"
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>提醒文案</h2><textarea rows="6" onclick="this.select()">{{ text }}</textarea><p><a class="btn" href="/dashboard">返回</a></p></div>{% endblock %}''', text=text)
+    text = f"Hi {c['name']}, your membership/service will expire on {c['expire_date']}. You have {remaining} sessions left. Please renew to avoid interruption."
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Reminder Message</h2><textarea rows="6" onclick="this.select()">{{ text }}</textarea><p><a class="btn" href="/dashboard">Back</a></p></div>{% endblock %}''', text=text)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
