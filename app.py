@@ -192,39 +192,39 @@ def dashboard():
             color = '正常'
             status = f'{days}天后到期'
         items.append({'c': c, 'status': status, 'color': color, 'remaining': remaining})
-    return render_template_string('''
+   return render_template_string('''
     {% extends "base.html" %}
     {% block content %}
     <div class="card">
-        <h2>仪表盘</h2>
-        <p>订阅状态：{% if plan_active(user) %}有效{% else %}已过期{% endif %}</p>
-        {% if plan_active(user) %}<a class="btn" href="/customer/add">添加客户</a>{% endif %}
+        <h2>Dashboard</h2>
+        <p>Status: {% if plan_active(user) %}Active{% else %}Expired{% endif %}</p>
+        {% if plan_active(user) %}<a class="btn" href="/customer/add">Add Client</a>{% endif %}
     </div>
     <div class="card">
-        <h3>客户列表</h3>
+        <h3>Client List</h3>
         {% if items %}
         <table>
-            <tr><th>姓名</th><th>剩余次数</th><th>到期日</th><th>状态</th><th>操作</th></tr>
+            <tr><th>Name</th><th>Sessions Left</th><th>Expiry Date</th><th>Status</th><th>Actions</th></tr>
             {% for item in items %}
             <tr>
                 <td>{{ item.c['name'] }}</td>
-                <td>{{ item.remaining }} 次</td>
+                <td>{{ item.remaining }} left</td>
                 <td>{{ item.c['expire_date'] }}</td>
                 <td class="status-{{ item.color }}">{{ item.status }}</td>
                 <td>
-                    <a class="btn btn-success" href="/customer/{{ item.c['id'] }}/use">扣次</a>
-                    <a class="btn" href="/customer/{{ item.c['id'] }}/remind">提醒文案</a>
+                    <a class="btn btn-success" href="/customer/{{ item.c['id'] }}/use">Use</a>
+                    <a class="btn" href="/customer/{{ item.c['id'] }}/remind">Remind</a>
                     <form method="post" action="/customer/{{ item.c['id'] }}/delete" style="display:inline">
-                        <button class="btn btn-danger" type="submit" onclick="return confirm('确定删除？')">删除</button>
+                        <button class="btn btn-danger" type="submit" onclick="return confirm('Delete?')">Delete</button>
                     </form>
                 </td>
             </tr>
             {% endfor %}
         </table>
-        {% else        %}
-        <p total>还没有客户，点击_count“添加客户” =开始。</p>
-        {% int endif %}
-   (request </div>
+        {% else %}
+        <p>No clients yet. Click "Add Client" to start.</p>
+        {% endif %}
+    </div>
     {% endblock %}
     ''', items=items)
 
