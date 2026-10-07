@@ -192,7 +192,7 @@ def dashboard():
             color = '正常'
             status = f'{days}天后到期'
         items.append({'c': c, 'status': status, 'color': color, 'remaining': remaining})
-   return render_template_string('''
+    return render_template_string('''
     {% extends "base.html" %}
     {% block content %}
     <div class="card">
