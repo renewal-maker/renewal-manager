@@ -10,6 +10,7 @@ from jinja2 import DictLoader
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
+
 DB_URL = "postgresql://postgres.psqvlhyulnhcmlonpnkz:xf48TnqNi4gAWz0i@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
 
 BASE_TEMPLATE = '''
@@ -20,7 +21,7 @@ BASE_TEMPLATE = '''
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }} - Client Tracker</title>
 <style>
-body { font-family: -apple-system, sans-serif; margin: 0; background: #f5f7fa; color: #333; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f7fa; color: #333; }
 nav { background: #2c3e50; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
 nav a { color: white; text-decoration: none; margin-right: 15px; }
 main { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
@@ -28,7 +29,7 @@ main { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
 th { background: #f8f9fa; }
-.btn { display: inline-block; padding: 6px 12px; background: #3498db; color: white; border: none; border-radius: 4px; text-decoration: none; cursor: pointer; font-size: 14px; }
+.btn { display: inline-block; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; text-decoration: none; cursor: pointer; }
 .btn-danger { background: #e74c3c; }
 .btn-success { background: #27ae60; }
 input, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
@@ -118,7 +119,7 @@ def inject_user():
 @app.route('/')
 def index():
     if 'user_id' in session: return redirect(url_for('dashboard'))
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h1>Client Tracker</h1><p>Simple tool to track client renewals and session credits.</p><p><a class="btn" href="/register">Start Free Trial</a> <a class="btn" href="/login">Login</a></p></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h1>Client Tracker</h1><p>Simple tool to track client renewals and session credits. Start your 14-day free trial now.</p><p><a class="btn" href="/register">Start 14-Day Free Trial</a> <a class="btn" href="/login">Login</a></p></div>{% endblock %}''')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -278,6 +279,14 @@ def remind(id):
     remaining = c['total_count'] - c['used_count']
     text = f"Hi {c['name']}, your membership/service will expire on {c['expire_date']}. You have {remaining} sessions left. Please renew to avoid interruption."
     return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Reminder Message</h2><textarea rows="6" onclick="this.select()">{{ text }}</textarea><p><a class="btn" href="/dashboard">Back</a></p></div>{% endblock %}''', text=text)
+
+@app.route('/privacy')
+def privacy():
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Privacy Policy</h2><p>We collect your email address and client data solely to provide the service. We do not sell or share your data with third parties. All data is stored securely. If you have questions, contact us at 897548225@qq.com</p></div>{% endblock %}''')
+
+@app.route('/terms')
+def terms():
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Terms of Service</h2><p>This service is provided "as-is" for $19.90/month. You can cancel anytime. We are not liable for any data loss or business interruption. By using this service, you agree to these terms.</p></div>{% endblock %}''')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
