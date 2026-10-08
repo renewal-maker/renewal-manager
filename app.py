@@ -16,7 +16,7 @@ CREEM_API_KEY = os.environ.get('CREEM_API_KEY', '')
 CREEM_WEBHOOK_SECRET = os.environ.get('CREEM_WEBHOOK_SECRET', '')
 
 # ⚠️ 明天去 Creem 后台复制真实支付链接，替换下面这行！
-CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://creem.io/pay/你的产品ID')
+CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://www.creem.io/payment/prod_2xoWDTMZOYkcbvGJgbQeFA')
 
 BASE_TEMPLATE = '''
 <!doctype html>
