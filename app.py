@@ -10,8 +10,13 @@ from jinja2 import DictLoader
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 
+# 从 Zeabur 环境变量读取配置
+DB_URL = os.environ.get('DB_URL', 'postgresql://postgres.psqvlhyulnhcmlonpnkz:你的新密码@aws-0-us-west-1.pooler.supabase.com:6543/postgres')
+CREEM_API_KEY = os.environ.get('CREEM_API_KEY', '')
+CREEM_WEBHOOK_SECRET = os.environ.get('CREEM_WEBHOOK_SECRET', '')
 
-DB_URL = "postgresql://postgres.psqvlhyulnhcmlonpnkz:xf48TnqNi4gAWz0i@aws-0-us-west-1.pooler.supabase.com:6543/postgres"
+# ⚠️ 明天去 Creem 后台复制真实支付链接，替换下面这行！
+CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://creem.io/pay/你的产品ID')
 
 BASE_TEMPLATE = '''
 <!doctype html>
@@ -29,9 +34,10 @@ main { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
 th { background: #f8f9fa; }
-.btn { display: inline-block; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; text-decoration: none; cursor: pointer; }
+.btn { display: inline-block; padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; text-decoration: none; cursor: pointer; font-size: 14px; }
 .btn-danger { background: #e74c3c; }
 .btn-success { background: #27ae60; }
+.btn-warning { background: #f39c12; }
 input, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
 label { font-weight: bold; }
 .flashes { list-style: none; padding: 0; }
@@ -67,6 +73,12 @@ label { font-weight: bold; }
     {% endif %}
   {% endwith %}
   {% block content %}{% endblock %}
+  
+  <footer style="text-align: center; padding: 20px; color: #777; font-size: 12px; border-top: 1px solid #eee; margin-top: 40px;">
+      <p>Support: 897548225@qq.com</p>
+      <p><a href="/privacy" style="color: #3498db;">Privacy Policy</a> | <a href="/terms" style="color: #3498db;">Terms of Service</a></p>
+      <p>&copy; 2026 Client Tracker. All rights reserved.</p>
+  </footer>
 </main>
 </body>
 </html>
@@ -114,12 +126,30 @@ def days_until(expire_date):
 
 @app.context_processor
 def inject_user():
-    return dict(user=get_current_user(), plan_active=plan_active)
+    return dict(user=get_current_user(), plan_active=plan_active, creem_checkout_url=CREEM_CHECKOUT_URL)
 
 @app.route('/')
 def index():
     if 'user_id' in session: return redirect(url_for('dashboard'))
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h1>Client Tracker</h1><p>Simple tool to track client renewals and session credits. Start your 14-day free trial now.</p><p><a class="btn" href="/register">Start 14-Day Free Trial</a> <a class="btn" href="/login">Login</a></p></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}
+    <div class="card">
+        <h1>Client Tracker</h1>
+        <p>Simple tool to track client renewals and session credits. Start your 14-day free trial now.</p>
+        <p><strong>Subscription: $19.90/month</strong> (Billed monthly. Cancel anytime.)</p>
+        <p><a class="btn" href="/register">Start 14-Day Free Trial</a> <a class="btn" href="/login">Login</a></p>
+    </div>
+    <div class="card">
+        <h2>What is Client Tracker?</h2>
+        <p>Client Tracker is a web-based SaaS tool designed for small business owners, such as pet groomers, salons, and gyms. It helps you manage your clients, track session credits (e.g., 10 grooming sessions), and never miss a renewal date.</p>
+        <h3>Why choose us?</h3>
+        <ul>
+            <li>Easy to use, no complex setup.</li>
+            <li>Track client sessions and remaining credits.</li>
+            <li>Generate reminder texts to reduce client churn.</li>
+            <li>Affordable flat monthly price of $19.90.</li>
+        </ul>
+    </div>
+    {% endblock %}''')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -195,6 +225,9 @@ def dashboard():
         <h2>Dashboard</h2>
         <p>Status: {% if plan_active(user) %}Active{% else %}Expired{% endif %}</p>
         {% if plan_active(user) %}<a class="btn" href="/customer/add">Add Client</a>{% endif %}
+        {% if not user['is_admin'] %}
+        <a class="btn btn-warning" href="{{ creem_checkout_url }}" target="_blank">Upgrade to Pro ($19.90/mo)</a>
+        {% endif %}
     </div>
     <div class="card">
         <h3>Client List</h3>
@@ -282,11 +315,46 @@ def remind(id):
 
 @app.route('/privacy')
 def privacy():
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Privacy Policy</h2><p>We collect your email address and client data solely to provide the service. We do not sell or share your data with third parties. All data is stored securely. If you have questions, contact us at 897548225@qq.com</p></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Privacy Policy</h2><p>We collect your email address and client data solely to provide the service. We do not sell or share your data with third parties. All data is stored securely. If you have questions, contact us at 897548225@qq.com.</p></div>{% endblock %}''')
 
 @app.route('/terms')
 def terms():
     return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Terms of Service</h2><p>This service is provided "as-is" for $19.90/month. You can cancel anytime. We are not liable for any data loss or business interruption. By using this service, you agree to these terms.</p></div>{% endblock %}''')
+
+# 新增：接收 Creem 付款成功通知的 Webhook 路由
+@app.route('/creem-webhook', methods=['POST'])
+def creem_webhook():
+    payload = request.get_data(as_text=True)
+    # 为了安全，可以在这里使用 CREEM_WEBHOOK_SECRET 验证签名
+    try:
+        data = request.get_json()
+        event_type = data.get('event_type')
+        
+        # 监听付款成功和订阅激活事件
+        if event_type in ['checkout.completed', 'subscription.paid', 'subscription.active']:
+            customer_email = data.get('data', {}).get('customer', {}).get('email', '')
+            
+            if customer_email:
+                db = get_db()
+                cur = db.cursor()
+                # 查找对应的用户，并增加30天有效期
+                cur.execute('SELECT id, plan_expires_at FROM users WHERE username = %s', (customer_email,))
+                user = cur.fetchone()
+                
+                if user:
+                    current_expire = user['plan_expires_at'] or datetime.date.today().isoformat()
+                    try:
+                        new_expire = (datetime.datetime.strptime(current_expire, '%Y-%m-%d').date() + datetime.timedelta(days=30)).isoformat()
+                    except:
+                        new_expire = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+                        
+                    cur.execute('UPDATE users SET plan_expires_at = %s WHERE id = %s', (new_expire, user['id']))
+                    db.commit()
+    except Exception as e:
+        print(f"Webhook Error: {e}")
+        return 'Error', 400
+        
+    return 'OK', 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
