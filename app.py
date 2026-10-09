@@ -14,9 +14,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
 DB_URL = os.environ.get('DB_URL', 'postgresql://postgres.psqvlhyulnhcmlonpnkz:你的新密码@aws-0-us-west-1.pooler.supabase.com:6543/postgres')
 CREEM_API_KEY = os.environ.get('CREEM_API_KEY', '')
 CREEM_WEBHOOK_SECRET = os.environ.get('CREEM_WEBHOOK_SECRET', '')
-
-# ⚠️ 明天去 Creem 后台复制真实支付链接，替换下面这行！
-CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://www.creem.io/payment/prod_2xoWDTMZOYkcbvGJgbQeFA')
+CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://www.creem.io/payment/prod_2xowDTMZOYkcbyGJgbQeFA')
 
 BASE_TEMPLATE = '''
 <!doctype html>
@@ -155,20 +153,21 @@ def index():
 def register():
     if request.method == 'POST':
         username = request.form['username'].strip()
+        email = request.form['email'].strip()
         password = request.form['password']
-        if username and password:
+        if username and email and password:
             db = get_db()
             cur = db.cursor()
             try:
                 trial_end = (datetime.date.today() + datetime.timedelta(days=14)).isoformat()
-                cur.execute('INSERT INTO users (username, password_hash, plan_expires_at) VALUES (%s, %s, %s)', (username, generate_password_hash(password), trial_end))
+                cur.execute('INSERT INTO users (username, email, password_hash, plan_expires_at) VALUES (%s, %s, %s, %s)', (username, email, generate_password_hash(password), trial_end))
                 db.commit()
                 flash('Registered successfully. 14-day trial started.')
                 return redirect(url_for('login'))
             except psycopg2.IntegrityError:
                 db.rollback()
-                flash('Username already exists')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Register</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Register</button></form></div>{% endblock %}''')
+                flash('Username or Email already exists')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Register</h2><form method="post"><label>Username</label><input name="username" required><label>Email</label><input name="email" type="email" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Register</button></form></div>{% endblock %}''')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -183,7 +182,26 @@ def login():
             session['user_id'] = user['id']
             return redirect(url_for('dashboard'))
         flash('Invalid username or password')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Login</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Login</button></form></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Login</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Login</button></form><p><a href="/reset_password" style="color:#3498db; font-size:14px;">Forgot Password?</a></p></div>{% endblock %}''')
+
+@app.route('/reset_password', methods=['GET', 'POST'])
+def reset_password():
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        new_password = request.form['new_password']
+        if email and new_password:
+            db = get_db()
+            cur = db.cursor()
+            cur.execute('SELECT id FROM users WHERE email = %s', (email,))
+            user = cur.fetchone()
+            if user:
+                cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (generate_password_hash(new_password), user['id']))
+                db.commit()
+                flash('Password reset successfully. Please login.')
+                return redirect(url_for('login'))
+            else:
+                flash('Email not found. Please check your email.')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Reset Password</h2><p>Enter the email you used to register and your new password.</p><form method="post"><label>Email</label><input name="email" type="email" required><label>New Password</label><input name="new_password" type="password" required><button class="btn" type="submit">Reset Password</button></form><p><a href="/login" style="color:#3498db;">Back to Login</a></p></div>{% endblock %}''')
 
 @app.route('/logout')
 def logout():
@@ -321,24 +339,19 @@ def privacy():
 def terms():
     return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Terms of Service</h2><p>This service is provided "as-is" for $19.90/month. You can cancel anytime. We are not liable for any data loss or business interruption. By using this service, you agree to these terms.</p></div>{% endblock %}''')
 
-# 新增：接收 Creem 付款成功通知的 Webhook 路由
 @app.route('/creem-webhook', methods=['POST'])
 def creem_webhook():
     payload = request.get_data(as_text=True)
-    # 为了安全，可以在这里使用 CREEM_WEBHOOK_SECRET 验证签名
     try:
         data = request.get_json()
         event_type = data.get('event_type')
         
-        # 监听付款成功和订阅激活事件
         if event_type in ['checkout.completed', 'subscription.paid', 'subscription.active']:
             customer_email = data.get('data', {}).get('customer', {}).get('email', '')
-            
             if customer_email:
                 db = get_db()
                 cur = db.cursor()
-                # 查找对应的用户，并增加30天有效期
-                cur.execute('SELECT id, plan_expires_at FROM users WHERE username = %s', (customer_email,))
+                cur.execute('SELECT id, plan_expires_at FROM users WHERE email = %s', (customer_email,))
                 user = cur.fetchone()
                 
                 if user:
@@ -350,6 +363,7 @@ def creem_webhook():
                         
                     cur.execute('UPDATE users SET plan_expires_at = %s WHERE id = %s', (new_expire, user['id']))
                     db.commit()
+                    print(f"Successfully renewed subscription for {customer_email} until {new_expire}")
     except Exception as e:
         print(f"Webhook Error: {e}")
         return 'Error', 400
