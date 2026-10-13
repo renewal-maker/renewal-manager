@@ -167,7 +167,7 @@ def register():
             except psycopg2.IntegrityError:
                 db.rollback()
                 flash('Username or Email already exists')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Register</h2><form method="post"><label>Username</label><input name="username" required><label>Email</label><input name="email" type="email" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Register</button></form></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Register</h2><p>ClientTracker is a simple tool for salons, pet groomers and gym owners to track client session credits and renewal dates. 14-day free trial, $19.90/month, cancel anytime.</p><form method="post"><label>Username</label><input name="username" required><label>Email</label><input name="email" type="email" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Register</button></form></div>{% endblock %}''')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -182,7 +182,7 @@ def login():
             session['user_id'] = user['id']
             return redirect(url_for('dashboard'))
         flash('Invalid username or password')
-    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Login</h2><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Login</button></form><p><a href="/reset_password" style="color:#3498db; font-size:14px;">Forgot Password?</a></p></div>{% endblock %}''')
+    return render_template_string('''{% extends "base.html" %}{% block content %}<div class="card"><h2>Login</h2><p>ClientTracker is a simple tool for salons, pet groomers and gym owners to track client session credits and renewal dates. 14-day free trial, $19.90/month, cancel anytime.</p><form method="post"><label>Username</label><input name="username" required><label>Password</label><input name="password" type="password" required><button class="btn" type="submit">Login</button></form><p><a href="/reset_password" style="color:#3498db; font-size:14px;">Forgot Password?</a></p></div>{% endblock %}''')
 
 @app.route('/reset_password', methods=['GET', 'POST'])
 def reset_password():
