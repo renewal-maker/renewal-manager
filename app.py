@@ -369,7 +369,7 @@ def creem_webhook():
         return 'Error', 400
         
     return 'OK', 200
-  @app.route('/robots.txt')
+@app.route('/robots.txt')
 def robots_txt():
     return send_from_directory('.', 'robots.txt')
 
