@@ -18,11 +18,14 @@ CREEM_CHECKOUT_URL = os.environ.get('CREEM_CHECKOUT_URL', 'https://www.creem.io/
 
 BASE_TEMPLATE = '''
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }} - Client Tracker</title>
+<meta name="description" content="Client Tracker is an easy customer tracking CRM for barbers, pet groomers and local service shops. 14-day free trial, $19.90 per month. Automatically track clients and follow-ups.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href=" https://clienttracker.org/ ">
 <style>
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f7fa; color: #333; }
 nav { background: #2c3e50; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
