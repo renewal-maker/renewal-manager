@@ -3,7 +3,7 @@ import datetime
 import functools
 import psycopg2
 import psycopg2.extras
-from flask import Flask, request, session, redirect, url_for, render_template_string, flash, g
+from flask import Flask, request, session, redirect, url_for, render_template_string, flash, g, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from jinja2 import DictLoader
 
@@ -369,6 +369,13 @@ def creem_webhook():
         return 'Error', 400
         
     return 'OK', 200
+  @app.route('/robots.txt')
+def robots_txt():
+    return send_from_directory('.', 'robots.txt')
+
+@app.route('/sitemap.xml')
+def sitemap_xml():
+    return send_from_directory('.', 'sitemap.xml')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
